@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <title>AR Women's Day - Full Cử Chỉ</title>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+  <style>
+    body { margin: 0; background: #050301; overflow: hidden; font-family: sans-serif; }
+    
+    /* Khung Camera Streamer */
+    video { 
+      position: absolute; 
+      bottom: 40px; 
+      left: 40px; 
+      width: 320px; 
+      height: 220px; 
+      object-fit: cover; 
+      transform: scaleX(-1); 
+      z-index: 10; 
+      border-radius: 16px; 
+      border: 2px solid rgba(255, 215, 0, 0.5); 
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8); 
+    }
+
+    /* Canvas chứa hiệu ứng AR */
+    canvas { 
+      position: absolute; 
+      top: 0; left: 0;
+      width: 100vw; height: 100vh;
+      z-index: 1; 
+      transform: scaleX(-1); 
+    } 
+
+    #loading { 
+      position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); 
+      color: #F5D061; font-size: 24px; z-index: 20; text-align: center; font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <div id="loading">Đang khởi động Camera & AI...<br><span style="font-size: 16px; font-weight: normal;">(Vui lòng cấp quyền camera và xòe tay trước ống kính)</span></div>
+  
+  <video id="video" autoplay playsinline></video>
+  <canvas id="canvas"></canvas>
+
+  <script>
+    const video = document.getElementById('video');
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const loading = document.getElementById('loading');
+
+    const numParticles = 5000; 
+    let particles = [];
+    
+    // Khai báo các mảng chứa tọa độ của các hình dáng
+    let shapeGalaxy = [], shapeHeart = [];
+    let shapeText83 = [], shapeTextChucMung = [], shapeTextHanhPhuc = [], shapeTextXinhDep = [];
+
+    // Lớp Hạt (Particle)
+    class Particle {
+      constructor() {
+        this.x = Math.random() * window.innerWidth;
+        this.y = Math.random() * window.innerHeight;
+        this.targetX = this.x;
+        this.targetY = this.y;
+        this.vx = 0;
+        this.vy = 0;
+        this.color = `rgba(100, 200, 255, ${Math.random() * 0.6 + 0.4})`;
+      }
+
+      update() {
+        this.vx = (this.targetX - this.x) * 0.08;
+        this.vy = (this.targetY - this.y) * 0.08;
+        this.x += this.vx;
+        this.y += this.vy;
+      }
+
+      draw() {
+        ctx.fillStyle = this.color;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, 1.5, 0, Math.PI * 2); 
+        ctx.fill();
+      }
+    }
+
+    function initParticles() {
+      particles = [];
+      for (let i = 0; i < numParticles; i++) {
+        particles.push(new Particle());
+      }
+    }
+
+    // THUẬT TOÁN QUÉT CHỮ VÀ PHÂN BỔ HẠT ĐỒNG ĐỀU
+    function createTextShape(text, fontSize) {
+      const tempCanvas = document.createElement('canvas');
+      const tempCtx = tempCanvas.getContext('2d', { willReadFrequently: true });
+      tempCanvas.width = canvas.width;
+      tempCanvas.height = canvas.height;
+
+      tempCtx.translate(tempCanvas.width, 0);
+      tempCtx.scale(-1, 1);
+
+      tempCtx.fillStyle = 'white';
+      tempCtx.font = `900 ${fontSize}px system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif`; 
+      tempCtx.textAlign = 'center';
+      tempCtx.textBaseline = 'middle';
+      
+      const lines = text.split('\n');
+      const lineHeight = fontSize * 1.1;
+      const startY = tempCanvas.height / 2 - (lines.length - 1) * lineHeight / 2;
+      const maxWidth = tempCanvas.width * 0.85; // Ngăn tràn viền
+
+      lines.forEach((line, index) => {
+        tempCtx.fillText(line, tempCanvas.width / 2, startY + index * lineHeight, maxWidth);
+      });
+
+      const imageData = tempCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height).data;
+      const validPoints = [];
+
+      for (let y = 0; y < tempCanvas.height; y += 2) {
+        for (let x = 0; x < tempCanvas.width; x += 2) {
+          const index = (y * tempCanvas.width + x) * 4;
+          const alpha = imageData[index + 3]; 
+          if (alpha > 128) { 
+            validPoints.push({ x: x, y: y });
+          }
+        }
+      }
+
+      const shape = [];
+      if (validPoints.length > 0) {
+        for (let i = 0; i < numParticles; i++) {
+          let pointIndex = Math.floor((i / numParticles) * validPoints.length);
+          let p = validPoints[pointIndex];
+          shape.push({
+            x: p.x + (Math.random() - 0.5) * 1, 
+            y: p.y + (Math.random() - 0.5) * 1
+          });
+        }
+      }
+      return shape;
+    }
+
+    function defineShapes() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+      
+      shapeGalaxy = []; shapeHeart = []; 
+      shapeText83 = []; shapeTextChucMung = []; shapeTextHanhPhuc = []; shapeTextXinhDep = [];
+      
+      const cx = canvas.width / 2;
+      const cy = canvas.height / 2;
+
+      // 1. DẢI NGÂN HÀ (Mặc định)
+      for (let i = 0; i < numParticles; i++) {
+        shapeGalaxy.push({ x: Math.random() * canvas.width, y: Math.random() * canvas.height });
+      }
+
+      // 2. TRÁI TIM
+      for (let i = 0; i < numParticles; i++) {
+        let t = Math.random() * Math.PI * 2;
+        let hx = 16 * Math.pow(Math.sin(t), 3);
+        let hy = 13 * Math.cos(t) - 5 * Math.cos(2*t) - 2 * Math.cos(3*t) - Math.cos(4*t);
+        shapeHeart.push({
+          x: cx + hx * 15 + (Math.random() * 8 - 4),
+          y: cy - hy * 15 + (Math.random() * 8 - 4)
+        });
+      }
+
+      // TẠO CÁC CHỮ (Cân đối lại kích cỡ để vừa màn hình)
+      let fontSize83 = Math.min(350, canvas.width / 2);
+      shapeText83 = createTextShape("8/3", fontSize83);
+
+      let fontSizeWords = Math.min(200, canvas.width / 3.5); 
+      shapeTextChucMung = createTextShape("CHÚC\nMỪNG", fontSizeWords); 
+      shapeTextHanhPhuc = createTextShape("HẠNH\nPHÚC", fontSizeWords); 
+      shapeTextXinhDep = createTextShape("XINH\nĐẸP", fontSizeWords); 
+    }
+
+    // Điều hướng hạt và phối màu
+    function morphParticles(targetShape, type = 'galaxy') {
+      if (!targetShape || targetShape.length === 0) targetShape = shapeGalaxy;
+
+      for (let i = 0; i < numParticles; i++) {
+        particles[i].targetX = targetShape[i].x;
+        particles[i].targetY = targetShape[i].y;
+        
+        if (type === 'heart') {
+           particles[i].color = `rgba(255, 20, 80, ${Math.random() * 0.6 + 0.4})`; // Hồng Đỏ
+        } else if (type === 'text83') {
+           particles[i].color = `rgba(255, 215, 0, ${Math.random() * 0.7 + 0.3})`; // Vàng Gold
+        } else if (type === 'chucmung') {
+           particles[i].color = `rgba(255, 20, 147, ${Math.random() * 0.7 + 0.3})`; // Hot Pink
+        } else if (type === 'hanhphuc') {
+           particles[i].color = `rgba(0, 255, 255, ${Math.random() * 0.7 + 0.3})`; // Xanh Cyan Neon
+        } else if (type === 'xinhdep') {
+           particles[i].color = `rgba(216, 180, 255, ${Math.random() * 0.7 + 0.3})`; // Tím Pastel Lavender
+        } else {
+           particles[i].color = `rgba(100, 200, 255, ${Math.random() * 0.6 + 0.4})`; // Xanh dương vũ trụ
+        }
+      }
+    }
+
+    function animate() {
+      ctx.fillStyle = 'rgba(5, 3, 1, 0.25)'; // Đuôi sáng dài và mượt
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      
+      for (let i = 0; i < numParticles; i++) {
+        particles[i].update();
+        particles[i].draw();
+      }
+      requestAnimationFrame(animate);
+    }
+
+    // --- KHỞI TẠO AI THEO DÕI TAY ---
+    const hands = new Hands({
+      locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
+    });
+
+    hands.setOptions({
+      maxNumHands: 1,
+      modelComplexity: 1,
+      minDetectionConfidence: 0.5,
+      minTrackingConfidence: 0.5
+    });
+
+    hands.onResults((res) => {
+      if(loading.style.display !== 'none') loading.style.display = 'none';
+
+      if (res.multiHandLandmarks && res.multiHandLandmarks.length > 0) {
+        const lm = res.multiHandLandmarks[0];
+
+        // 1. Kiểm tra 4 ngón dài (Trỏ, Giữa, Áp út, Út)
+        const isIndexUp = lm[8].y < lm[6].y;   
+        const isMiddleUp = lm[12].y < lm[10].y; 
+        const isRingUp = lm[16].y < lm[14].y;   
+        const isPinkyUp = lm[20].y < lm[18].y;  
+
+        // 2. Thuật toán kiểm tra Ngón Cái xòe hay cụp
+        // Tính khoảng cách từ đầu ngón cái (4) đến gốc ngón út (17) 
+        // So sánh với khoảng cách từ khớp ngón cái (3) đến gốc ngón út (17)
+        const distThumbTip = Math.hypot(lm[4].x - lm[17].x, lm[4].y - lm[17].y);
+        const distThumbJoint = Math.hypot(lm[3].x - lm[17].x, lm[3].y - lm[17].y);
+        const isThumbUp = distThumbTip > distThumbJoint; // Nếu xòe ra, khoảng cách sẽ xa hơn
+
+        // --- BỘ ĐIỀU KIỆN CỬ CHỈ ---
+        
+        // Cử chỉ xòe 5 ngón: Tất cả 5 ngón đều giơ lên
+        if (isThumbUp && isIndexUp && isMiddleUp && isRingUp && isPinkyUp) {
+          morphParticles(shapeTextXinhDep, 'xinhdep');
+        } 
+        // Cử chỉ giơ 4 ngón: 4 ngón dài giơ lên, ngón cái cụp vào trong
+        else if (!isThumbUp && isIndexUp && isMiddleUp && isRingUp && isPinkyUp) {
+          morphParticles(shapeTextHanhPhuc, 'hanhphuc');
+        }
+        // Cử chỉ giơ 2 ngón (Peace): Ngón trỏ & giữa giơ, các ngón khác cụp
+        else if (!isThumbUp && isIndexUp && isMiddleUp && !isRingUp && !isPinkyUp) {
+          morphParticles(shapeText83, 'text83');
+        } 
+        // Cử chỉ Rock 🤘: Ngón cái cụp, ngón trỏ & út giơ
+        else if (!isThumbUp && isIndexUp && !isMiddleUp && !isRingUp && isPinkyUp) {
+          morphParticles(shapeHeart, 'heart');
+        } 
+        // Cử chỉ giơ 1 ngón trỏ: Chỉ ngón trỏ giơ, các ngón khác cụp
+        else if (!isThumbUp && isIndexUp && !isMiddleUp && !isRingUp && !isPinkyUp) {
+          morphParticles(shapeTextChucMung, 'chucmung');
+        } 
+        // Các tư thế khác không xác định
+        else {
+          morphParticles(shapeGalaxy, 'galaxy');
+        }
+      } else {
+        morphParticles(shapeGalaxy, 'galaxy');
+      }
+    });
+
+    // --- KẾT NỐI CAMERA ---
+    const camera = new Camera(video, {
+      onFrame: async () => { await hands.send({image: video}); },
+      width: 640,
+      height: 480
+    });
+
+    // --- CHẠY CHƯƠNG TRÌNH ---
+    initParticles();
+    defineShapes();
+    animate(); 
+    camera.start(); 
+
+    // Reponsive khi xoay màn hình
+    window.addEventListener('resize', () => {
+      defineShapes(); 
+    });
+  </script>
+</body>
+</html>
