@@ -1,297 +1,363 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-  <meta charset="UTF-8">
-  <title>AR Women's Day - Full Cử Chỉ</title>
-  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
-  <style>
-    body { margin: 0; background: #050301; overflow: hidden; font-family: sans-serif; }
-    
-    /* Khung Camera Streamer */
-    video { 
-      position: absolute; 
-      bottom: 40px; 
-      left: 40px; 
-      width: 320px; 
-      height: 220px; 
-      object-fit: cover; 
-      transform: scaleX(-1); 
-      z-index: 10; 
-      border-radius: 16px; 
-      border: 2px solid rgba(255, 215, 0, 0.5); 
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8); 
-    }
-
-    /* Canvas chứa hiệu ứng AR */
-    canvas { 
-      position: absolute; 
-      top: 0; left: 0;
-      width: 100vw; height: 100vh;
-      z-index: 1; 
-      transform: scaleX(-1); 
-    } 
-
-    #loading { 
-      position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); 
-      color: #F5D061; font-size: 24px; z-index: 20; text-align: center; font-weight: bold;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Laptop35 - uy tín tạo niềm tin</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div id="loading">Đang khởi động Camera & AI...<br><span style="font-size: 16px; font-weight: normal;">(Vui lòng cấp quyền camera và xòe tay trước ống kính)</span></div>
-  
-  <video id="video" autoplay playsinline></video>
-  <canvas id="canvas"></canvas>
 
-  <script>
-    const video = document.getElementById('video');
-    const canvas = document.getElementById('canvas');
-    const ctx = canvas.getContext('2d');
-    const loading = document.getElementById('loading');
+    <header class="header">
+        <div class="container header-top">
+            <div class="logo"><i class="fas fa-laptop-code"></i> <span>laptop35</span></div>
+            
+            <div class="search-bar">
+                <input type="text" id="search-input" placeholder="Bạn cần tìm máy gì? (Thử gõ 'mac')..." autocomplete="off">
+                <button><i class="fas fa-search"></i></button>
+                <ul id="search-suggestions" class="suggestions-list"></ul>
+            </div>
 
-    const numParticles = 5000; 
-    let particles = [];
-    
-    // Khai báo các mảng chứa tọa độ của các hình dáng
-    let shapeGalaxy = [], shapeHeart = [];
-    let shapeText83 = [], shapeTextChucMung = [], shapeTextHanhPhuc = [], shapeTextXinhDep = [];
+            <div class="header-links">
+                <div class="header-item" id="open-cart-btn" style="cursor: pointer;">
+                    <i class="fas fa-shopping-cart"></i> <span>Giỏ hàng <b id="cart-count" style="color:var(--primary-orange)">(0)</b></span>
+                </div>
+                <div class="header-item"><i class="fas fa-headset"></i> <span>Liên hệ<br>trực tiếp</span></div>
+            </div>
+        </div>
+    </header>
 
-    // Lớp Hạt (Particle)
-    class Particle {
-      constructor() {
-        this.x = Math.random() * window.innerWidth;
-        this.y = Math.random() * window.innerHeight;
-        this.targetX = this.x;
-        this.targetY = this.y;
-        this.vx = 0;
-        this.vy = 0;
-        this.color = `rgba(100, 200, 255, ${Math.random() * 0.6 + 0.4})`;
-      }
+    <div class="address-bar">
+        <div class="container">
+            <ul class="address-list">
+                <li><i class="fab fa-neos"></i> Hà Nội: <strong>0904.583.588</strong></li>
+                <li><i class="fab fa-neos"></i> HCM: <strong>0904.666.488</strong></li>
+                <li><i class="fas fa-truck"></i> Giao hàng toàn quốc</li>
+            </ul>
+        </div>
+    </div>
 
-      update() {
-        this.vx = (this.targetX - this.x) * 0.08;
-        this.vy = (this.targetY - this.y) * 0.08;
-        this.x += this.vx;
-        this.y += this.vy;
-      }
-
-      draw() {
-        ctx.fillStyle = this.color;
-        ctx.beginPath();
-        ctx.arc(this.x, this.y, 1.5, 0, Math.PI * 2); 
-        ctx.fill();
-      }
-    }
-
-    function initParticles() {
-      particles = [];
-      for (let i = 0; i < numParticles; i++) {
-        particles.push(new Particle());
-      }
-    }
-
-    // THUẬT TOÁN QUÉT CHỮ VÀ PHÂN BỔ HẠT ĐỒNG ĐỀU
-    function createTextShape(text, fontSize) {
-      const tempCanvas = document.createElement('canvas');
-      const tempCtx = tempCanvas.getContext('2d', { willReadFrequently: true });
-      tempCanvas.width = canvas.width;
-      tempCanvas.height = canvas.height;
-
-      tempCtx.translate(tempCanvas.width, 0);
-      tempCtx.scale(-1, 1);
-
-      tempCtx.fillStyle = 'white';
-      tempCtx.font = `900 ${fontSize}px system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif`; 
-      tempCtx.textAlign = 'center';
-      tempCtx.textBaseline = 'middle';
-      
-      const lines = text.split('\n');
-      const lineHeight = fontSize * 1.1;
-      const startY = tempCanvas.height / 2 - (lines.length - 1) * lineHeight / 2;
-      const maxWidth = tempCanvas.width * 0.85; // Ngăn tràn viền
-
-      lines.forEach((line, index) => {
-        tempCtx.fillText(line, tempCanvas.width / 2, startY + index * lineHeight, maxWidth);
-      });
-
-      const imageData = tempCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height).data;
-      const validPoints = [];
-
-      for (let y = 0; y < tempCanvas.height; y += 2) {
-        for (let x = 0; x < tempCanvas.width; x += 2) {
-          const index = (y * tempCanvas.width + x) * 4;
-          const alpha = imageData[index + 3]; 
-          if (alpha > 128) { 
-            validPoints.push({ x: x, y: y });
-          }
-        }
-      }
-
-      const shape = [];
-      if (validPoints.length > 0) {
-        for (let i = 0; i < numParticles; i++) {
-          let pointIndex = Math.floor((i / numParticles) * validPoints.length);
-          let p = validPoints[pointIndex];
-          shape.push({
-            x: p.x + (Math.random() - 0.5) * 1, 
-            y: p.y + (Math.random() - 0.5) * 1
-          });
-        }
-      }
-      return shape;
-    }
-
-    function defineShapes() {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
-      
-      shapeGalaxy = []; shapeHeart = []; 
-      shapeText83 = []; shapeTextChucMung = []; shapeTextHanhPhuc = []; shapeTextXinhDep = [];
-      
-      const cx = canvas.width / 2;
-      const cy = canvas.height / 2;
-
-      // 1. DẢI NGÂN HÀ (Mặc định)
-      for (let i = 0; i < numParticles; i++) {
-        shapeGalaxy.push({ x: Math.random() * canvas.width, y: Math.random() * canvas.height });
-      }
-
-      // 2. TRÁI TIM
-      for (let i = 0; i < numParticles; i++) {
-        let t = Math.random() * Math.PI * 2;
-        let hx = 16 * Math.pow(Math.sin(t), 3);
-        let hy = 13 * Math.cos(t) - 5 * Math.cos(2*t) - 2 * Math.cos(3*t) - Math.cos(4*t);
-        shapeHeart.push({
-          x: cx + hx * 15 + (Math.random() * 8 - 4),
-          y: cy - hy * 15 + (Math.random() * 8 - 4)
-        });
-      }
-
-      // TẠO CÁC CHỮ (Cân đối lại kích cỡ để vừa màn hình)
-      let fontSize83 = Math.min(350, canvas.width / 2);
-      shapeText83 = createTextShape("8/3", fontSize83);
-
-      let fontSizeWords = Math.min(200, canvas.width / 3.5); 
-      shapeTextChucMung = createTextShape("CHÚC\nMỪNG", fontSizeWords); 
-      shapeTextHanhPhuc = createTextShape("HẠNH\nPHÚC", fontSizeWords); 
-      shapeTextXinhDep = createTextShape("XINH\nĐẸP", fontSizeWords); 
-    }
-
-    // Điều hướng hạt và phối màu
-    function morphParticles(targetShape, type = 'galaxy') {
-      if (!targetShape || targetShape.length === 0) targetShape = shapeGalaxy;
-
-      for (let i = 0; i < numParticles; i++) {
-        particles[i].targetX = targetShape[i].x;
-        particles[i].targetY = targetShape[i].y;
+    <main class="container">
         
-        if (type === 'heart') {
-           particles[i].color = `rgba(255, 20, 80, ${Math.random() * 0.6 + 0.4})`; // Hồng Đỏ
-        } else if (type === 'text83') {
-           particles[i].color = `rgba(255, 215, 0, ${Math.random() * 0.7 + 0.3})`; // Vàng Gold
-        } else if (type === 'chucmung') {
-           particles[i].color = `rgba(255, 20, 147, ${Math.random() * 0.7 + 0.3})`; // Hot Pink
-        } else if (type === 'hanhphuc') {
-           particles[i].color = `rgba(0, 255, 255, ${Math.random() * 0.7 + 0.3})`; // Xanh Cyan Neon
-        } else if (type === 'xinhdep') {
-           particles[i].color = `rgba(216, 180, 255, ${Math.random() * 0.7 + 0.3})`; // Tím Pastel Lavender
-        } else {
-           particles[i].color = `rgba(100, 200, 255, ${Math.random() * 0.6 + 0.4})`; // Xanh dương vũ trụ
-        }
-      }
-    }
+        <div class="hero-section">
+            <aside class="sidebar">
+                <div class="sidebar-title"><i class="fas fa-bars"></i> DANH MỤC SẢN PHẨM</div>
+                <ul class="sidebar-menu">
+                    <li class="has-submenu">
+                        <a href="#" class="cat-link" data-category="van-phong">Laptop Sinh Viên - Văn Phòng <i class="fas fa-caret-right"></i></a>
+                        <div class="submenu">
+                            <div class="submenu-col">
+                                <h4>Theo Thương Hiệu</h4>
+                                <a href="#">Laptop Dell</a>
+                                <a href="#">Laptop Asus</a>
+                                <a href="#">Laptop HP</a>
+                                <a href="#">Laptop Lenovo</a>
+                            </div>
+                            <div class="submenu-col">
+                                <h4>Theo Mức Giá</h4>
+                                <a href="#">Dưới 10 Triệu</a>
+                                <a href="#">Từ 10 - 15 Triệu</a>
+                                <a href="#">Trên 15 Triệu</a>
+                            </div>
+                            <div class="submenu-col">
+                                <h4>🔥 Mua Nhiều Nhất</h4>
+                                <div class="submenu-product">
+                                    <img src="3.webp" alt="Dell">
+                                    <p>Dell Inspiron 3511</p>
+                                    <span>11.500.000 đ</span>
+                                </div>
+                            </div>
+                        </div>
+                    </li>
 
-    function animate() {
-      ctx.fillStyle = 'rgba(5, 3, 1, 0.25)'; // Đuôi sáng dài và mượt
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      
-      for (let i = 0; i < numParticles; i++) {
-        particles[i].update();
-        particles[i].draw();
-      }
-      requestAnimationFrame(animate);
-    }
+                    <li class="has-submenu">
+                        <a href="#" class="cat-link" data-category="gaming">Laptop Gaming Đồ Họa <i class="fas fa-caret-right"></i></a>
+                        <div class="submenu">
+                            <div class="submenu-col">
+                                <h4>Theo Thương Hiệu</h4>
+                                <a href="#">Asus ROG / TUF</a>
+                                <a href="#">Acer Nitro</a>
+                                <a href="#">Lenovo Legion</a>
+                                <a href="#">Dell Alienware</a>
+                            </div>
+                            <div class="submenu-col">
+                                <h4>🔥 Đang Giảm Giá</h4>
+                                <div class="submenu-product">
+                                    <img src="4.webp" alt="Nitro">
+                                    <p>Acer Nitro 5 Tiger</p>
+                                    <span>19.900.000 đ</span>
+                                </div>
+                            </div>
+                        </div>
+                    </li>
 
-    // --- KHỞI TẠO AI THEO DÕI TAY ---
-    const hands = new Hands({
-      locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
-    });
+                    <li class="has-submenu">
+                        <a href="#" class="cat-link" data-category="macbook">Macbook Cũ Giá Rẻ <i class="fas fa-caret-right"></i></a>
+                    </li>
+                    <li><a href="#" class="cat-link" data-category="all" style="color: var(--primary-orange); font-weight: bold;">Hiển thị tất cả sản phẩm <i class="fas fa-caret-right"></i></a></li>
+                </ul>
+            </aside>
 
-    hands.setOptions({
-      maxNumHands: 1,
-      modelComplexity: 1,
-      minDetectionConfidence: 0.5,
-      minTrackingConfidence: 0.5
-    });
+            <div class="main-banner">
+                <div class="big-banner">
+                    <img id="main-banner-img" src="16.jpg" alt="Banner Chính">
+                </div>
+                <div class="banner-thumbnails">
+                    <div class="thumb active" data-image="17.jpg">SALE LAPTOP GAMING</div>
+                    <div class="thumb" data-image="18.jpg">MACBOOK CHỈ TỪ 10TR</div>
+                    <div class="thumb" data-image="19.jpg">COMBO PHÍM CHUỘT</div>
+                </div>
+            </div>
 
-    hands.onResults((res) => {
-      if(loading.style.display !== 'none') loading.style.display = 'none';
+            <aside class="right-info">
+                <div class="store-item"><p>Hỗ trợ mua hàng Zalo</p><a href="#" class="btn-zalo">Hà Nội: 0904.583.588</a></div>
+                <div class="store-item"><p>Bảo hành phần mềm</p><a href="#" class="btn-zalo">Trọn đời máy</a></div>
+                <div class="store-item"><p>Đổi trả miễn phí</p><a href="#" class="btn-zalo">Trong vòng 7 ngày</a></div>
+            </aside>
+        </div>
 
-      if (res.multiHandLandmarks && res.multiHandLandmarks.length > 0) {
-        const lm = res.multiHandLandmarks[0];
+        <div class="sub-banners">
+            <div class="sub-banner-item"><img src="15.png" alt="Sub 1"></div>
+            <div class="sub-banner-item"><img src="13.png" alt="Sub 2"></div>
+            <div class="sub-banner-item"><img src="12.jpg" alt="Sub 3"></div>
+        </div>
 
-        // 1. Kiểm tra 4 ngón dài (Trỏ, Giữa, Áp út, Út)
-        const isIndexUp = lm[8].y < lm[6].y;   
-        const isMiddleUp = lm[12].y < lm[10].y; 
-        const isRingUp = lm[16].y < lm[14].y;   
-        const isPinkyUp = lm[20].y < lm[18].y;  
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 30px; margin-bottom: 15px; border-bottom: 2px solid var(--primary-orange); padding-bottom: 10px;">
+            <h2 class="section-title" style="margin: 0; border: none; padding: 0;">SẢN PHẨM HOT</h2>
+        </div>
 
-        // 2. Thuật toán kiểm tra Ngón Cái xòe hay cụp
-        // Tính khoảng cách từ đầu ngón cái (4) đến gốc ngón út (17) 
-        // So sánh với khoảng cách từ khớp ngón cái (3) đến gốc ngón út (17)
-        const distThumbTip = Math.hypot(lm[4].x - lm[17].x, lm[4].y - lm[17].y);
-        const distThumbJoint = Math.hypot(lm[3].x - lm[17].x, lm[3].y - lm[17].y);
-        const isThumbUp = distThumbTip > distThumbJoint; // Nếu xòe ra, khoảng cách sẽ xa hơn
+        <div class="brand-grid" style="margin-bottom: 20px;">
+            <div class="brand-item" data-brand-target="dell"><img src="5.png" alt="Dell"></div>
+            <div class="brand-item" data-brand-target="asus"><img src="6.webp" alt="Asus"></div>
+            <div class="brand-item" data-brand-target="hp"><img src="7.webp" alt="HP"></div>
+            <div class="brand-item" data-brand-target="lenovo"><img src="8.webp" alt="Lenovo"></div>
+            <div class="brand-item" data-brand-target="apple"><img src="11.webp" alt="Apple"></div>
+            <div class="brand-item" data-brand-target="acer"><img src="10.png" alt="Acer"></div>
+        </div>
 
-        // --- BỘ ĐIỀU KIỆN CỬ CHỈ ---
-        
-        // Cử chỉ xòe 5 ngón: Tất cả 5 ngón đều giơ lên
-        if (isThumbUp && isIndexUp && isMiddleUp && isRingUp && isPinkyUp) {
-          morphParticles(shapeTextXinhDep, 'xinhdep');
-        } 
-        // Cử chỉ giơ 4 ngón: 4 ngón dài giơ lên, ngón cái cụp vào trong
-        else if (!isThumbUp && isIndexUp && isMiddleUp && isRingUp && isPinkyUp) {
-          morphParticles(shapeTextHanhPhuc, 'hanhphuc');
-        }
-        // Cử chỉ giơ 2 ngón (Peace): Ngón trỏ & giữa giơ, các ngón khác cụp
-        else if (!isThumbUp && isIndexUp && isMiddleUp && !isRingUp && !isPinkyUp) {
-          morphParticles(shapeText83, 'text83');
-        } 
-        // Cử chỉ Rock 🤘: Ngón cái cụp, ngón trỏ & út giơ
-        else if (!isThumbUp && isIndexUp && !isMiddleUp && !isRingUp && isPinkyUp) {
-          morphParticles(shapeHeart, 'heart');
-        } 
-        // Cử chỉ giơ 1 ngón trỏ: Chỉ ngón trỏ giơ, các ngón khác cụp
-        else if (!isThumbUp && isIndexUp && !isMiddleUp && !isRingUp && !isPinkyUp) {
-          morphParticles(shapeTextChucMung, 'chucmung');
-        } 
-        // Các tư thế khác không xác định
-        else {
-          morphParticles(shapeGalaxy, 'galaxy');
-        }
-      } else {
-        morphParticles(shapeGalaxy, 'galaxy');
-      }
-    });
+        <div class="sort-box" style="text-align: right; margin-bottom: 15px;">
+            <select id="sort-price" class="sort-select">
+                <option value="default">Sắp xếp: Mặc định</option>
+                <option value="asc">Giá: Từ thấp đến cao</option>
+                <option value="desc">Giá: Từ cao đến thấp</option>
+            </select>
+        </div>
 
-    // --- KẾT NỐI CAMERA ---
-    const camera = new Camera(video, {
-      onFrame: async () => { await hands.send({image: video}); },
-      width: 640,
-      height: 480
-    });
+        <div class="product-grid" id="product-grid">
+            
+            <div class="product-item" data-category="van-phong" data-price="12590000" data-order="1" data-brand="asus">
+                <img src="1.webp" class="open-modal-trigger" alt="Asus">
+                <h3 class="open-modal-trigger">Asus Vivobook 15 (Mới 100%)</h3>
+                <div class="specs">• Intel Core i5-1235U<br>• RAM: 8GB DDR4<br>• Ổ cứng: 512GB SSD</div>
+                <div class="price">12.590.000 đ</div>
+                <button class="btn-buy open-modal-trigger"><i class="fas fa-shopping-cart"></i> CHỌN MUA</button>
+            </div>
+            <div class="product-item" data-category="van-phong" data-price="12590000" data-order="1" data-brand="asus">
+                <img src="1.webp" class="open-modal-trigger" alt="Asus">
+                <h3 class="open-modal-trigger">Asus Vivobook 15 (Mới 100%)</h3>
+                <div class="specs">• Intel Core i5-1235U<br>• RAM: 8GB DDR4<br>• Ổ cứng: 512GB SSD</div>
+                <div class="price">12.590.000 đ</div>
+                <button class="btn-buy open-modal-trigger"><i class="fas fa-shopping-cart"></i> CHỌN MUA</button>
+            </div>
+            <div class="product-item" data-category="van-phong" data-price="12590000" data-order="1" data-brand="asus">
+                <img src="1.webp" class="open-modal-trigger" alt="Asus">
+                <h3 class="open-modal-trigger">Asus Vivobook 15 (Mới 100%)</h3>
+                <div class="specs">• Intel Core i5-1235U<br>• RAM: 8GB DDR4<br>• Ổ cứng: 512GB SSD</div>
+                <div class="price">12.590.000 đ</div>
+                <button class="btn-buy open-modal-trigger"><i class="fas fa-shopping-cart"></i> CHỌN MUA</button>
+            </div>
+            <div class="product-item" data-category="van-phong" data-price="12590000" data-order="1" data-brand="asus">
+                <img src="1.webp" class="open-modal-trigger" alt="Asus">
+                <h3 class="open-modal-trigger">Asus Vivobook 15 (Mới 100%)</h3>
+                <div class="specs">• Intel Core i5-1235U<br>• RAM: 8GB DDR4<br>• Ổ cứng: 512GB SSD</div>
+                <div class="price">12.590.000 đ</div>
+                <button class="btn-buy open-modal-trigger"><i class="fas fa-shopping-cart"></i> CHỌN MUA</button>
+            </div>
 
-    // --- CHẠY CHƯƠNG TRÌNH ---
-    initParticles();
-    defineShapes();
-    animate(); 
-    camera.start(); 
+            <div class="product-item" data-category="van-phong" data-price="7200000" data-order="2" data-brand="lenovo">
+                <img src="2.jpg" class="open-modal-trigger" alt="Lenovo">
+                <h3 class="open-modal-trigger">Lenovo Thinkpad T490 (Cũ Đẹp)</h3>
+                <div class="specs">• Intel Core i5-8365U<br>• RAM: 16GB DDR4<br>• Ổ cứng: 256GB SSD</div>
+                <div class="price">7.200.000 đ</div>
+                <button class="btn-buy open-modal-trigger"><i class="fas fa-shopping-cart"></i> CHỌN MUA</button>
+            </div>
+            <div class="product-item" data-category="van-phong" data-price="7200000" data-order="2" data-brand="lenovo">
+                <img src="2.jpg" class="open-modal-trigger" alt="Lenovo">
+                <h3 class="open-modal-trigger">Lenovo Thinkpad T490 (Cũ Đẹp)</h3>
+                <div class="specs">• Intel Core i5-8365U<br>• RAM: 16GB DDR4<br>• Ổ cứng: 256GB SSD</div>
+                <div class="price">7.200.000 đ</div>
+                <button class="btn-buy open-modal-trigger"><i class="fas fa-shopping-cart"></i> CHỌN MUA</button>
+            </div>
+            <div class="product-item" data-category="van-phong" data-price="7200000" data-order="2" data-brand="lenovo">
+                <img src="2.jpg" class="open-modal-trigger" alt="Lenovo">
+                <h3 class="open-modal-trigger">Lenovo Thinkpad T490 (Cũ Đẹp)</h3>
+                <div class="specs">• Intel Core i5-8365U<br>• RAM: 16GB DDR4<br>• Ổ cứng: 256GB SSD</div>
+                <div class="price">7.200.000 đ</div>
+                <button class="btn-buy open-modal-trigger"><i class="fas fa-shopping-cart"></i> CHỌN MUA</button>
+            </div>
+            <div class="product-item" data-category="van-phong" data-price="7200000" data-order="2" data-brand="lenovo">
+                <img src="2.jpg" class="open-modal-trigger" alt="Lenovo">
+                <h3 class="open-modal-trigger">Lenovo Thinkpad T490 (Cũ Đẹp)</h3>
+                <div class="specs">• Intel Core i5-8365U<br>• RAM: 16GB DDR4<br>• Ổ cứng: 256GB SSD</div>
+                <div class="price">7.200.000 đ</div>
+                <button class="btn-buy open-modal-trigger"><i class="fas fa-shopping-cart"></i> CHỌN MUA</button>
+            </div>
 
-    // Reponsive khi xoay màn hình
-    window.addEventListener('resize', () => {
-      defineShapes(); 
-    });
-  </script>
+            <div class="product-item" data-category="macbook" data-price="17800000" data-order="3" data-brand="apple">
+                <img src="3.jpg" class="open-modal-trigger" alt="Macbook">
+                <h3 class="open-modal-trigger">Macbook Air M1 2020</h3>
+                <div class="specs">• Apple M1 Chip<br>• RAM: 8GB Unified<br>• Ổ cứng: 256GB SSD</div>
+                <div class="price">17.800.000 đ</div>
+                <button class="btn-buy open-modal-trigger"><i class="fas fa-shopping-cart"></i> CHỌN MUA</button>
+            </div>
+            <div class="product-item" data-category="macbook" data-price="17800000" data-order="3" data-brand="apple">
+                <img src="3.jpg" class="open-modal-trigger" alt="Macbook">
+                <h3 class="open-modal-trigger">Macbook Air M1 2020</h3>
+                <div class="specs">• Apple M1 Chip<br>• RAM: 8GB Unified<br>• Ổ cứng: 256GB SSD</div>
+                <div class="price">17.800.000 đ</div>
+                <button class="btn-buy open-modal-trigger"><i class="fas fa-shopping-cart"></i> CHỌN MUA</button>
+            </div>
+            <div class="product-item" data-category="macbook" data-price="17800000" data-order="3" data-brand="apple">
+                <img src="3.jpg" class="open-modal-trigger" alt="Macbook">
+                <h3 class="open-modal-trigger">Macbook Air M1 2020</h3>
+                <div class="specs">• Apple M1 Chip<br>• RAM: 8GB Unified<br>• Ổ cứng: 256GB SSD</div>
+                <div class="price">17.800.000 đ</div>
+                <button class="btn-buy open-modal-trigger"><i class="fas fa-shopping-cart"></i> CHỌN MUA</button>
+            </div>
+
+            <div class="product-item" data-category="gaming" data-price="16500000" data-order="4" data-brand="dell">
+                <img src="3.webp" class="open-modal-trigger" alt="Dell Gaming">
+                <h3 class="open-modal-trigger">Dell Gaming G15 5515</h3>
+                <div class="specs">• Ryzen 7 5800H<br>• RTX 3050Ti 4GB<br>• Ổ cứng: 512GB SSD</div>
+                <div class="price">16.500.000 đ</div>
+                <button class="btn-buy open-modal-trigger"><i class="fas fa-shopping-cart"></i> CHỌN MUA</button>
+            </div>
+            <div class="product-item" data-category="gaming" data-price="16500000" data-order="4" data-brand="dell">
+                <img src="3.webp" class="open-modal-trigger" alt="Dell Gaming">
+                <h3 class="open-modal-trigger">Dell Gaming G15 5515</h3>
+                <div class="specs">• Ryzen 7 5800H<br>• RTX 3050Ti 4GB<br>• Ổ cứng: 512GB SSD</div>
+                <div class="price">16.500.000 đ</div>
+                <button class="btn-buy open-modal-trigger"><i class="fas fa-shopping-cart"></i> CHỌN MUA</button>
+            </div>
+            <div class="product-item" data-category="gaming" data-price="16500000" data-order="4" data-brand="dell">
+                <img src="3.webp" class="open-modal-trigger" alt="Dell Gaming">
+                <h3 class="open-modal-trigger">Dell Gaming G15 5515</h3>
+                <div class="specs">• Ryzen 7 5800H<br>• RTX 3050Ti 4GB<br>• Ổ cứng: 512GB SSD</div>
+                <div class="price">16.500.000 đ</div>
+                <button class="btn-buy open-modal-trigger"><i class="fas fa-shopping-cart"></i> CHỌN MUA</button>
+            </div>
+
+            <div class="product-item" data-category="van-phong" data-price="14000000" data-order="5" data-brand="hp">
+                <img src="2.jpg" class="open-modal-trigger" alt="HP">
+                <h3 class="open-modal-trigger">HP Pavilion 15 (Đẹp Keng)</h3>
+                <div class="specs">• Intel Core i5-1135G7<br>• RAM: 8GB DDR4<br>• Ổ cứng: 512GB SSD</div>
+                <div class="price">14.000.000 đ</div>
+                <button class="btn-buy open-modal-trigger"><i class="fas fa-shopping-cart"></i> CHỌN MUA</button>
+            </div>
+            <div class="product-item" data-category="van-phong" data-price="14000000" data-order="5" data-brand="hp">
+                <img src="2.jpg" class="open-modal-trigger" alt="HP">
+                <h3 class="open-modal-trigger">HP Pavilion 15 (Đẹp Keng)</h3>
+                <div class="specs">• Intel Core i5-1135G7<br>• RAM: 8GB DDR4<br>• Ổ cứng: 512GB SSD</div>
+                <div class="price">14.000.000 đ</div>
+                <button class="btn-buy open-modal-trigger"><i class="fas fa-shopping-cart"></i> CHỌN MUA</button>
+            </div>
+
+            <div class="product-item" data-category="gaming" data-price="19900000" data-order="6" data-brand="acer">
+                <img src="4.webp" class="open-modal-trigger" alt="Acer">
+                <h3 class="open-modal-trigger">Acer Nitro 5 Tiger</h3>
+                <div class="specs">• Core i5-12500H<br>• RTX 3050Ti 4GB<br>• Màn hình 144Hz</div>
+                <div class="price">19.900.000 đ</div>
+                <button class="btn-buy open-modal-trigger"><i class="fas fa-shopping-cart"></i> CHỌN MUA</button>
+            </div>
+            <div class="product-item" data-category="gaming" data-price="19900000" data-order="6" data-brand="acer">
+                <img src="4.webp" class="open-modal-trigger" alt="Acer">
+                <h3 class="open-modal-trigger">Acer Nitro 5 Tiger</h3>
+                <div class="specs">• Core i5-12500H<br>• RTX 3050Ti 4GB<br>• Màn hình 144Hz</div>
+                <div class="price">19.900.000 đ</div>
+                <button class="btn-buy open-modal-trigger"><i class="fas fa-shopping-cart"></i> CHỌN MUA</button>
+            </div>
+
+        </div> </main>
+
+    <div class="floating-contact">
+        <div class="float-btn"><i class="fab fa-facebook-messenger" style="color: #0084ff; font-size: 24px;"></i> Chat Messenger</div>
+        <div class="float-btn"><i class="fab fa-neos" style="color: #0088cc; font-size: 24px;"></i> Chat Zalo</div>
+        <div class="float-btn phone"><i class="fas fa-phone-alt"></i> 0247.106.9999</div>
+    </div>
+
+    <div id="productModal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn">&times;</span>
+            <div class="modal-body">
+                <div class="modal-img-container"><img id="modal-img" src="" alt="Sản phẩm"></div>
+                <div class="modal-info">
+                    <h2 id="modal-title">Tên sản phẩm</h2>
+                    <div id="modal-price" class="price">Giá</div>
+                    <div id="modal-desc" class="desc">Thông số...</div>
+                    <button id="confirm-add-cart" class="btn-buy" style="margin-top: auto; padding: 15px; font-size: 16px;">
+                        <i class="fas fa-check"></i> XÁC NHẬN MUA HÀNG
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="cartModal" class="modal">
+        <div class="modal-content" style="max-width: 600px; padding: 30px;">
+            <span class="close-btn" id="close-cart-btn">&times;</span>
+            <h2 style="color: #333; margin-bottom: 20px; border-bottom: 2px solid var(--primary-orange); padding-bottom: 10px;">
+                <i class="fas fa-shopping-cart"></i> Giỏ Hàng Của Bạn
+            </h2>
+            <div id="cart-items" style="max-height: 350px; overflow-y: auto; margin-bottom: 20px;"></div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <span style="font-size: 18px; color: #333; font-weight: bold;">Tổng cộng:</span>
+                <span id="cart-total" style="font-size: 22px; font-weight: bold; color: var(--price-red);">0 đ</span>
+            </div>
+            <button id="btn-checkout-now" class="btn-buy" style="padding: 15px; font-size: 16px;">
+                ĐẶT HÀNG NGAY <i class="fas fa-arrow-right"></i>
+            </button>
+        </div>
+    </div>
+
+    <div id="checkoutModal" class="modal">
+        <div class="modal-content" style="max-width: 400px; padding: 30px;">
+            <span class="close-btn" id="close-checkout-btn">&times;</span>
+            <h2 style="color: #333; margin-bottom: 20px; text-align: center;">Thông Tin Giao Hàng</h2>
+            <div style="display: flex; flex-direction: column; gap: 15px;">
+                <input type="text" id="cust-name" placeholder="Họ và tên người nhận" style="padding: 12px; border: 1px solid #ccc; border-radius: 5px; font-size: 14px; outline: none;">
+                <input type="text" id="cust-phone" placeholder="Số điện thoại liên hệ" style="padding: 12px; border: 1px solid #ccc; border-radius: 5px; font-size: 14px; outline: none;">
+                <textarea id="cust-address" placeholder="Địa chỉ nhận hàng chi tiết..." rows="3" style="padding: 12px; border: 1px solid #ccc; border-radius: 5px; font-size: 14px; outline: none;"></textarea>
+                <button id="btn-confirm-order" class="btn-buy" style="padding: 15px; font-size: 16px; margin-top: 10px; background-color: #28a745;">
+                    <i class="fas fa-check-circle"></i> XÁC NHẬN MUA HÀNG
+                </button>
+            </div>
+        </div>
+    </div>
+<div id="successModal" class="modal">
+        <div class="modal-content" style="max-width: 400px; padding: 40px 30px; text-align: center; border-top: 5px solid #28a745;">
+            <div class="success-icon">
+                <i class="fas fa-check-circle"></i>
+            </div>
+            <h2 style="color: #28a745; margin-bottom: 15px; font-size: 24px;">Đặt Hàng Thành Công!</h2>
+            <p id="success-message" style="color: #555; line-height: 1.6; margin-bottom: 25px; font-size: 15px;">
+                </p>
+            <button id="btn-continue-shopping" class="btn-buy" style="background-color: #28a745; padding: 12px 20px; font-size: 15px; border-radius: 30px;">
+                <i class="fas fa-shopping-bag"></i> TIẾP TỤC MUA SẮM
+            </button>
+        </div>
+    </div>
+    <div id="fake-sale-popup" class="fake-sale-popup">
+        <img id="fake-sale-img" src="" alt="Product">
+        <div class="fake-sale-info">
+            <p id="fake-sale-name"><strong>Nguyễn Văn A</strong> (Hà Nội)</p>
+            <p>Vừa đặt mua: <span id="fake-sale-product">Tên máy</span></p>
+            <small id="fake-sale-time">Vài giây trước</small>
+        </div>
+        <span class="fake-sale-close" id="close-fake-sale">&times;</span>
+    </div>
+    <footer><p>&copy; 2026 Bản quyền thuộc về Bạn. Thiết kế chuẩn E-commerce.</p></footer>
+
+    <script src="script.js"></script>
 </body>
 </html>
